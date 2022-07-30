@@ -70,6 +70,40 @@ test('blog without author is not added', async () => {
   expect(blogsAtEnd).toHaveLength(initialBlogs.length)
 })
 
+test('blog without title cannot be added', async () => {
+  const newBlog = {
+    author: 'Test Author',
+    url: 'https://test.test/',
+    likes: 9
+  }
+
+  await api
+    .post('/api/blogs')
+    .send(newBlog)
+    .expect(400)
+
+  const blogsAtEnd = await blogsInDb()
+
+  expect(blogsAtEnd).toHaveLength(initialBlogs.length)
+})
+
+test('blog without url cannot be added', async () => {
+  const newBlog = {
+    title: 'Test',
+    author: 'Test Author',
+    likes: 9
+  }
+
+  await api
+    .post('/api/blogs')
+    .send(newBlog)
+    .expect(400)
+
+  const blogsAtEnd = await blogsInDb()
+
+  expect(blogsAtEnd).toHaveLength(initialBlogs.length)
+})
+
 test('blog without likes must be added with 0 likes', async () => {
   const newBlog = {
     title: 'Test',

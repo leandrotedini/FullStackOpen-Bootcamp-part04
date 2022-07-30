@@ -3,7 +3,7 @@ const mongoose = require('mongoose')
 const blogSchema = new mongoose.Schema({
   title: { type: String, required: true },
   author: { type: String, required: true },
-  url: String,
+  url: { type: String, required: true },
   likes: Number
 })
 
