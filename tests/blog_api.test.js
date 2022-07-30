@@ -1,29 +1,17 @@
 const mongoose = require('mongoose')
 const supertest = require('supertest')
+const { initialBlogs, blogsInDb } = require('../utils/test_helper')
+const Blog = require('../models/blog')
 const app = require('../app')
 const api = supertest(app)
-const Blog = require('../models/blog')
-const initialBlogs = [
-  {
-    title: 'React patterns',
-    author: 'Michael Chan',
-    url: 'https://reactpatterns.com/',
-    likes: 7
-  },
-  {
-    title: 'Go To Statement Considered Harmful',
-    author: 'Edsger W. Dijkstra',
-    url: 'http://www.u.arizona.edu/~rubinson/copyright_violations/Go_To_Considered_Harmful.html',
-    likes: 5
-  }
-]
+
 
 beforeEach(async () => {
   await Blog.deleteMany({})
-  let blogObject = new Blog(initialBlogs[0])
-  await blogObject.save()
-  blogObject = new Blog(initialBlogs[1])
-  await blogObject.save()
+  const blogObjects = initialBlogs
+    .map(blog => new Blog(blog))
+  const promiseArray = blogObjects.map(blog => blog.save())
+  await Promise.all(promiseArray)
 })
 
 test('blogs are returned as json', async () => {
@@ -58,11 +46,10 @@ test('a valid blog can be added', async () => {
     .expect(201)
     .expect('Content-Type', /application\/json/)
 
-  const response = await api.get('/api/blogs')
+  const blogsAtEnd = await blogsInDb()
+  const contents = blogsAtEnd.map(b => b.author)
 
-  const contents = response.body.map(r => r.author)
-
-  expect(response.body).toHaveLength(initialBlogs.length + 1)
+  expect(blogsAtEnd).toHaveLength(initialBlogs.length + 1)
   expect(contents).toContain('Test Author')
 })
 
@@ -74,13 +61,24 @@ test('blog without author is not added', async () => {
   }
 
   await api
-    .post('/api/notes')
+    .post('/api/blogs')
     .send(newBlog)
-    .expect(404)
+    .expect(400)
 
-  const response = await api.get('/api/blogs')
+  const blogsAtEnd = await blogsInDb()
 
-  expect(response.body).toHaveLength(initialBlogs.length)
+  expect(blogsAtEnd).toHaveLength(initialBlogs.length)
+})
+
+test('blog without likes must be added with 0 likes', async () => {
+  const newBlog = {
+    title: 'Test',
+    author: 'Test Author',
+    url: 'https://test.test/'
+  }
+
+  const response = await api.post('/api/blogs').send(newBlog)
+  expect(response.body.likes).toBe(0)
 })
 
 afterAll(() => {
