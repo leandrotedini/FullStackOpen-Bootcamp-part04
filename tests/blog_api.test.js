@@ -32,87 +32,109 @@ test('id must be defined', async () => {
   expect(response.body[0].id).toBeDefined()
 })
 
-test('a valid blog can be added', async () => {
-  const newBlog = {
-    title: 'Test',
-    author: 'Test Author',
-    url: 'https://test.test/',
-    likes: 9
-  }
 
-  await api
-    .post('/api/blogs')
-    .send(newBlog)
-    .expect(201)
-    .expect('Content-Type', /application\/json/)
+describe('Create Blog', () => {
+  test('a valid blog can be added', async () => {
+    const newBlog = {
+      title: 'Test',
+      author: 'Test Author',
+      url: 'https://test.test/',
+      likes: 9
+    }
 
-  const blogsAtEnd = await blogsInDb()
-  const contents = blogsAtEnd.map(b => b.author)
+    await api
+      .post('/api/blogs')
+      .send(newBlog)
+      .expect(201)
+      .expect('Content-Type', /application\/json/)
 
-  expect(blogsAtEnd).toHaveLength(initialBlogs.length + 1)
-  expect(contents).toContain('Test Author')
+    const blogsAtEnd = await blogsInDb()
+    const contents = blogsAtEnd.map(b => b.author)
+
+    expect(blogsAtEnd).toHaveLength(initialBlogs.length + 1)
+    expect(contents).toContain('Test Author')
+  })
+
+  test('blog without author is not added', async () => {
+    const newBlog = {
+      title: 'Test',
+      url: 'https://test.test/',
+      likes: 9
+    }
+
+    await api
+      .post('/api/blogs')
+      .send(newBlog)
+      .expect(400)
+
+    const blogsAtEnd = await blogsInDb()
+
+    expect(blogsAtEnd).toHaveLength(initialBlogs.length)
+  })
+
+  test('blog without title cannot be added', async () => {
+    const newBlog = {
+      author: 'Test Author',
+      url: 'https://test.test/',
+      likes: 9
+    }
+
+    await api
+      .post('/api/blogs')
+      .send(newBlog)
+      .expect(400)
+
+    const blogsAtEnd = await blogsInDb()
+
+    expect(blogsAtEnd).toHaveLength(initialBlogs.length)
+  })
+
+  test('blog without url cannot be added', async () => {
+    const newBlog = {
+      title: 'Test',
+      author: 'Test Author',
+      likes: 9
+    }
+
+    await api
+      .post('/api/blogs')
+      .send(newBlog)
+      .expect(400)
+
+    const blogsAtEnd = await blogsInDb()
+
+    expect(blogsAtEnd).toHaveLength(initialBlogs.length)
+  })
+
+  test('blog without likes must be added with 0 likes', async () => {
+    const newBlog = {
+      title: 'Test',
+      author: 'Test Author',
+      url: 'https://test.test/'
+    }
+
+    const response = await api.post('/api/blogs').send(newBlog)
+    expect(response.body.likes).toBe(0)
+  })
 })
 
-test('blog without author is not added', async () => {
-  const newBlog = {
-    title: 'Test',
-    url: 'https://test.test/',
-    likes: 9
-  }
+describe('Delete Blog', () => {
+  test('a blog can be deleted', async () => {
 
-  await api
-    .post('/api/blogs')
-    .send(newBlog)
-    .expect(400)
+    const blogsAtStart = await blogsInDb()
+    const blogToDelete = blogsAtStart[0]
 
-  const blogsAtEnd = await blogsInDb()
+    await api
+      .delete(`/api/blogs/${blogToDelete.id}`)
+      .expect(204)
 
-  expect(blogsAtEnd).toHaveLength(initialBlogs.length)
-})
+    const blogsAtEnd = await blogsInDb()
+    expect(blogsAtEnd).toHaveLength(initialBlogs.length - 1)
 
-test('blog without title cannot be added', async () => {
-  const newBlog = {
-    author: 'Test Author',
-    url: 'https://test.test/',
-    likes: 9
-  }
+    const ids = blogsAtEnd.map(r => r.id)
+    expect(ids).not.toContain(blogToDelete.id)
 
-  await api
-    .post('/api/blogs')
-    .send(newBlog)
-    .expect(400)
-
-  const blogsAtEnd = await blogsInDb()
-
-  expect(blogsAtEnd).toHaveLength(initialBlogs.length)
-})
-
-test('blog without url cannot be added', async () => {
-  const newBlog = {
-    title: 'Test',
-    author: 'Test Author',
-    likes: 9
-  }
-
-  await api
-    .post('/api/blogs')
-    .send(newBlog)
-    .expect(400)
-
-  const blogsAtEnd = await blogsInDb()
-
-  expect(blogsAtEnd).toHaveLength(initialBlogs.length)
-})
-
-test('blog without likes must be added with 0 likes', async () => {
-  const newBlog = {
-    title: 'Test',
-    author: 'Test Author',
-    url: 'https://test.test/'
-  }
-
-  const response = await api.post('/api/blogs').send(newBlog)
-  expect(response.body.likes).toBe(0)
+  })
 })
 
 afterAll(() => {
