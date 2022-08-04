@@ -1,5 +1,7 @@
 const Blog = require('../models/blog')
 const User = require('../models/user')
+const bcrypt = require('bcrypt')
+
 const initialBlogs = [
   {
     title: 'React patterns',
@@ -39,6 +41,55 @@ const initialBlogs = [
   }
 ]
 
+const usernameCreator = '@Test'
+
+const initialUsers = [
+  {
+    username: usernameCreator,
+    name: 'Test',
+    password: 'testpass'
+  },
+  {
+    username: '@Test2',
+    name: 'Test 2',
+    password: 'testpass2'
+  },
+  {
+    username: '@Test3',
+    name: 'Test 3',
+    password: 'testpass3'
+  }
+]
+
+const initializeDB = async () => {
+  await Blog.deleteMany({})
+  await User.deleteMany({})
+
+  await initializeUsers()
+  await initializeBlogs()
+}
+
+const initializeUsers = async () => {
+  const userObjects = await Promise.all(initialUsers
+    .map( async user => {
+      user.passwordHash = await bcrypt.hash(user.password, 10)
+      return new User(user)
+    }))
+  const promiseArray = userObjects.map(user => user.save())
+  await Promise.all(promiseArray)
+}
+
+const initializeBlogs = async () => {
+  const userCreator = await User.findOne({ username: usernameCreator })
+  const blogObjects = initialBlogs
+    .map(blog => {
+      blog.user = userCreator._id.toString()
+      return new Blog(blog)
+    })
+  const promiseArray = blogObjects.map(blog => blog.save())
+  await Promise.all(promiseArray)
+}
+
 const blogsInDb = async () => {
   const blogs = await Blog.find({})
   return blogs.map(blog => blog.toJSON())
@@ -49,8 +100,13 @@ const usersInDb = async () => {
   return users.map(user => user.toJSON())
 }
 
+
+
 module.exports = {
   initialBlogs,
+  initialUsers,
+  usernameCreator,
   blogsInDb,
-  usersInDb
+  usersInDb,
+  initializeDB
 }

@@ -1,18 +1,33 @@
 const mongoose = require('mongoose')
 const supertest = require('supertest')
-const { initialBlogs, blogsInDb } = require('../utils/test_helper')
+const { initialBlogs,
+  usernameCreator,
+  blogsInDb,
+  initializeDB } = require('../utils/test_helper')
 const Blog = require('../models/blog')
+const User = require('../models/user')
 const app = require('../app')
 const api = supertest(app)
-
+const jwt = require('jsonwebtoken')
 
 beforeEach(async () => {
-  await Blog.deleteMany({})
-  const blogObjects = initialBlogs
-    .map(blog => new Blog(blog))
-  const promiseArray = blogObjects.map(blog => blog.save())
-  await Promise.all(promiseArray)
+  await initializeDB()
 })
+
+const getValidToken = async () => {
+  const userCreator = await User.findOne({ username: usernameCreator })
+  const validUserToken = 'Bearer ' + generateToken({
+    username: userCreator.username,
+    id: userCreator._id
+  })
+  return validUserToken
+}
+
+const generateToken = (user) => {
+  return jwt.sign(user, process.env.SECRET)
+}
+
+
 
 test('blogs are returned as json', async () => {
   await api
@@ -41,9 +56,11 @@ describe('Create Blog', () => {
       url: 'https://test.test/',
       likes: 9
     }
+    const validUserToken = await getValidToken()
 
     await api
       .post('/api/blogs')
+      .set('Authorization', validUserToken)
       .send(newBlog)
       .expect(201)
       .expect('Content-Type', /application\/json/)
@@ -62,8 +79,11 @@ describe('Create Blog', () => {
       likes: 9
     }
 
+    const validUserToken = await getValidToken()
+
     await api
       .post('/api/blogs')
+      .set('Authorization', validUserToken)
       .send(newBlog)
       .expect(400)
 
@@ -79,8 +99,11 @@ describe('Create Blog', () => {
       likes: 9
     }
 
+    const validUserToken = await getValidToken()
+
     await api
       .post('/api/blogs')
+      .set('Authorization', validUserToken)
       .send(newBlog)
       .expect(400)
 
@@ -96,8 +119,11 @@ describe('Create Blog', () => {
       likes: 9
     }
 
+    const validUserToken = await getValidToken()
+
     await api
       .post('/api/blogs')
+      .set('Authorization', validUserToken)
       .send(newBlog)
       .expect(400)
 
@@ -113,8 +139,14 @@ describe('Create Blog', () => {
       url: 'https://test.test/'
     }
 
-    const response = await api.post('/api/blogs').send(newBlog)
+    const validUserToken = await getValidToken()
+
+    const response = await api.post('/api/blogs')
+      .send(newBlog)
+      .set('Authorization', validUserToken)
+
     expect(response.body.likes).toBe(0)
+
   })
 })
 
@@ -124,8 +156,12 @@ describe('Delete Blog', () => {
     const blogsAtStart = await blogsInDb()
     const blogToDelete = blogsAtStart[0]
 
+    const validUserToken = await getValidToken()
+
+
     await api
       .delete(`/api/blogs/${blogToDelete.id}`)
+      .set('Authorization', validUserToken)
       .expect(204)
 
     const blogsAtEnd = await blogsInDb()
