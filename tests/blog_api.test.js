@@ -72,6 +72,45 @@ describe('Create Blog', () => {
     expect(contents).toContain('Test Author')
   })
 
+  test('a blog without token cant be added', async () => {
+    const newBlog = {
+      title: 'Test',
+      author: 'Test Author',
+      url: 'https://test.test/',
+      likes: 9
+    }
+
+    await api
+      .post('/api/blogs')
+      .send(newBlog)
+      .expect(401)
+      .expect('Content-Type', /application\/json/)
+
+    const blogsAtEnd = await blogsInDb()
+
+    expect(blogsAtEnd).toHaveLength(initialBlogs.length)
+  })
+
+  test('a blog with invalid token cant be added', async () => {
+    const newBlog = {
+      title: 'Test',
+      author: 'Test Author',
+      url: 'https://test.test/',
+      likes: 9
+    }
+
+    await api
+      .post('/api/blogs')
+      .set('Authorization', 'InvalidToken')
+      .send(newBlog)
+      .expect(401)
+      .expect('Content-Type', /application\/json/)
+
+    const blogsAtEnd = await blogsInDb()
+
+    expect(blogsAtEnd).toHaveLength(initialBlogs.length)
+  })
+
   test('blog without author is not added', async () => {
     const newBlog = {
       title: 'Test',

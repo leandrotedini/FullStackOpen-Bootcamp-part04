@@ -8,14 +8,15 @@ const tokenExtractor = (request, response, next) => {
     ? authorization.substring(7)
     : null
 
-  const decodedToken = jwt.verify(token, process.env.SECRET)
-  if (!token || !decodedToken.id) {
+  try {
+    const decodedToken = jwt.verify(token, process.env.SECRET)
+    request.userId = decodedToken.id
+
+    next()
+  }catch{
     return response.status(401).json({ error: 'token missing or invalid' })
   }
 
-  request.userId = decodedToken.id
-
-  next()
 }
 
 module.exports = tokenExtractor
